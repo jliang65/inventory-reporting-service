@@ -10,17 +10,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.jeff.inventoryreporting.dto.ReportRequestDto;
+import com.jeff.inventoryreporting.messaging.JobPublisher;
 import com.jeff.inventoryreporting.repository.JobRepository;
 
 class JobServiceTest {
 
 	private JobRepository jobRepository;
+	private JobPublisher jobPublisher;
 	private JobService jobService;
 
 	@BeforeEach
 	void setUp() {
 		jobRepository = mock(JobRepository.class);
-		jobService = new JobService(jobRepository);
+		jobPublisher = mock(JobPublisher.class);
+		jobService = new JobService(jobRepository, jobPublisher);
 	}
 
 	@Test
@@ -31,5 +34,6 @@ class JobServiceTest {
 
 		assertThrows(IllegalArgumentException.class, () -> jobService.save(request));
 		verifyNoInteractions(jobRepository);
+		verifyNoInteractions(jobPublisher);
 	}
 }

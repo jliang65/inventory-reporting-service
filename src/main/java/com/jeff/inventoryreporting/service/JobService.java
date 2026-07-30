@@ -9,6 +9,7 @@ import com.jeff.inventoryreporting.dto.ReportRequestDto;
 import com.jeff.inventoryreporting.entity.Job;
 import com.jeff.inventoryreporting.entity.JobStatus;
 import com.jeff.inventoryreporting.entity.JobType;
+import com.jeff.inventoryreporting.messaging.JobPublisher;
 import com.jeff.inventoryreporting.repository.JobRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -17,9 +18,11 @@ import jakarta.persistence.EntityNotFoundException;
 public class JobService {
 
 	private final JobRepository jobRepository;
+	private final JobPublisher jobPublisher;
 
-	public JobService(JobRepository jobRepository) {
+	public JobService(JobRepository jobRepository, JobPublisher jobPublisher) {
 		this.jobRepository = jobRepository;
+		this.jobPublisher = jobPublisher;
 	}
 
 	public JobResponseDto findById(Long id) {
@@ -43,7 +46,9 @@ public class JobService {
 				request.getEndDate(),
 				request.getLocationId());
 
-		return toDto(jobRepository.save(job));
+		Job saved = jobRepository.save(job);
+		jobPublisher.publish(saved.getId());
+		return toDto(saved);
 	}
 
 	private JobResponseDto toDto(Job job) {
