@@ -4,11 +4,14 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.amqp.AmqpException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -32,6 +35,26 @@ public class GlobalExceptionHandler {
 				.findFirst()
 				.orElse("Validation failed");
 		return error(HttpStatus.BAD_REQUEST, message);
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<Map<String, Object>> handleUnreadableMessage(HttpMessageNotReadableException ex) {
+		return error(HttpStatus.BAD_REQUEST, "Invalid request body");
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+		return error(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + ex.getName());
+	}
+
+	@ExceptionHandler(AmqpException.class)
+	public ResponseEntity<Map<String, Object>> handleAmqp(AmqpException ex) {
+		return error(HttpStatus.SERVICE_UNAVAILABLE, "Messaging service unavailable");
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+		return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
 	}
 
 	private ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {

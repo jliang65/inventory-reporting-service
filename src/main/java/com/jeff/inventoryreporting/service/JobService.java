@@ -1,8 +1,11 @@
 package com.jeff.inventoryreporting.service;
 
+import java.time.Instant;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.jeff.inventoryreporting.dto.JobResponseDto;
 import com.jeff.inventoryreporting.dto.ReportRequestDto;
@@ -26,9 +29,7 @@ public class JobService {
 	}
 
 	public JobResponseDto findById(Long id) {
-		Job job = jobRepository.findById(id)
-				.orElseThrow(() -> new EntityNotFoundException("Job not found: " + id));
-		return toDto(job);
+		return toDto(findJob(id));
 	}
 
 	public Page<JobResponseDto> findAll(JobStatus status, Long locationId, Pageable pageable) {
@@ -49,6 +50,41 @@ public class JobService {
 		Job saved = jobRepository.save(job);
 		jobPublisher.publish(saved.getId());
 		return toDto(saved);
+	}
+
+	@Transactional
+	public boolean markProcessing(Long jobId) {
+		Job job = findJob(jobId);
+
+		if (job.getStatus() != JobStatus.QUEUED) {
+			return false;
+		}
+
+		job.setStatus(JobStatus.PROCESSING);
+		job.setStartedAt(Instant.now());
+		job.setErrorMessage(null);
+		return true;
+	}
+
+	@Transactional
+	public void markCompleted(Long jobId, String resultPath) {
+		Job job = findJob(jobId);
+		job.setStatus(JobStatus.COMPLETED);
+		job.setCompletedAt(Instant.now());
+		job.setResultPath(resultPath);
+	}
+
+	@Transactional
+	public void markFailed(Long jobId, String errorMessage) {
+		Job job = findJob(jobId);
+		job.setStatus(JobStatus.FAILED);
+		job.setCompletedAt(Instant.now());
+		job.setErrorMessage(errorMessage);
+	}
+
+	private Job findJob(Long jobId) {
+		return jobRepository.findById(jobId)
+				.orElseThrow(() -> new EntityNotFoundException("Job not found: " + jobId));
 	}
 
 	private JobResponseDto toDto(Job job) {

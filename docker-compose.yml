@@ -22,6 +22,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - inventory-reporting-rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -46,3 +48,4 @@ services:
 
 volumes:
   inventory-reporting-data:
+  inventory-reporting-rabbitmq-data:
