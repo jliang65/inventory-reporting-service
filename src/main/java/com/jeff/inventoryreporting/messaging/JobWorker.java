@@ -22,22 +22,33 @@ public class JobWorker {
 		this.reportGenerator = reportGenerator;
 	}
 
-	@RabbitListener(queues = RabbitMqConfig.QUEUE)
+	@RabbitListener(
+			queues = RabbitMqConfig.QUEUE,
+			containerFactory = "jobListenerContainerFactory")
 	public void process(JobMessage message) {
-		if (!jobService.markProcessing(message.getJobId())) {
-			return;
-		}
+		jobService.beginAttempt(message.getJobId());
 
 		try {
 			String resultPath = generateReport(message.getJobId());
 			jobService.markCompleted(message.getJobId(), resultPath);
 		} catch (Exception exception) {
-			jobService.markFailed(message.getJobId(), exception.getMessage());
+			jobService.recordAttemptFailure(
+					message.getJobId(),
+					safeMessage(exception));
+			throw exception;
 		}
 	}
 
 	private String generateReport(Long jobId) {
 		Job job = jobService.findJob(jobId);
 		return reportGenerator.generate(job);
+	}
+
+	private String safeMessage(Exception exception) {
+		String message = exception.getMessage();
+		if (message == null || message.isBlank()) {
+			return exception.getClass().getSimpleName();
+		}
+		return message;
 	}
 }

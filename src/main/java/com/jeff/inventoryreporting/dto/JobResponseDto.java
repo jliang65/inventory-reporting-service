@@ -19,6 +19,8 @@ public class JobResponseDto {
 	private Instant completedAt;
 	private String resultPath;
 	private String errorMessage;
+	private int attemptCount;
+	private String lastError;
 
 	public Long getId() {
 		return id;
@@ -106,5 +108,21 @@ public class JobResponseDto {
 
 	public void setErrorMessage(String errorMessage) {
 		this.errorMessage = errorMessage;
+	}
+
+	public int getAttemptCount() {
+		return attemptCount;
+	}
+
+	public void setAttemptCount(int attemptCount) {
+		this.attemptCount = attemptCount;
+	}
+
+	public String getLastError() {
+		return lastError;
+	}
+
+	public void setLastError(String lastError) {
+		this.lastError = lastError;
 	}
 }

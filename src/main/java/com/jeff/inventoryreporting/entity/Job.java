@@ -52,6 +52,12 @@ public class Job {
 	@Column(name = "error_message")
 	private String errorMessage;
 
+	@Column(name = "attempt_count", nullable = false)
+	private int attemptCount;
+
+	@Column(name = "last_error")
+	private String lastError;
+
 	protected Job() {
 	}
 
@@ -62,6 +68,7 @@ public class Job {
 		this.endDate = endDate;
 		this.locationId = locationId;
 		this.createdAt = Instant.now();
+		this.attemptCount = 0;
 	}
 
 	public Long getId() {
@@ -150,5 +157,21 @@ public class Job {
 
 	public void setErrorMessage(String errorMessage) {
 		this.errorMessage = errorMessage;
+	}
+
+	public int getAttemptCount() {
+		return attemptCount;
+	}
+
+	public void setAttemptCount(int attemptCount) {
+		this.attemptCount = attemptCount;
+	}
+
+	public String getLastError() {
+		return lastError;
+	}
+
+	public void setLastError(String lastError) {
+		this.lastError = lastError;
 	}
 }

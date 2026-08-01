@@ -53,17 +53,47 @@ public class JobService {
 	}
 
 	@Transactional
-	public boolean markProcessing(Long jobId) {
+	public void beginAttempt(Long jobId) {
 		Job job = findJob(jobId);
 
-		if (job.getStatus() != JobStatus.QUEUED) {
-			return false;
+		if (job.getStatus() == JobStatus.COMPLETED
+				|| job.getStatus() == JobStatus.FAILED) {
+			throw new IllegalStateException(
+					"Job already finished: " + jobId + " (" + job.getStatus() + ")");
 		}
 
-		job.setStatus(JobStatus.PROCESSING);
-		job.setStartedAt(Instant.now());
-		job.setErrorMessage(null);
-		return true;
+		if (job.getStatus() == JobStatus.QUEUED) {
+			job.setStatus(JobStatus.PROCESSING);
+			job.setStartedAt(Instant.now());
+		}
+
+		job.setAttemptCount(job.getAttemptCount() + 1);
+	}
+
+	@Transactional
+	public void recordAttemptFailure(Long jobId, String errorMessage) {
+		Job job = findJob(jobId);
+		job.setLastError(errorMessage);
+	}
+
+	@Transactional
+	public void markFailedAfterRetries(Long jobId) {
+		Job job = findJob(jobId);
+
+		if (job.getStatus() == JobStatus.COMPLETED) {
+			return;
+		}
+
+		job.setStatus(JobStatus.FAILED);
+		job.setCompletedAt(Instant.now());
+
+		String finalError = job.getLastError();
+
+		if (finalError == null || finalError.isBlank()) {
+			finalError = "Report generation failed after all retry attempts";
+		}
+
+		job.setErrorMessage(finalError);
 	}
 
 	@Transactional
@@ -72,6 +102,7 @@ public class JobService {
 		job.setStatus(JobStatus.COMPLETED);
 		job.setCompletedAt(Instant.now());
 		job.setResultPath(resultPath);
+		job.setErrorMessage(null);
 	}
 
 	@Transactional
@@ -79,6 +110,7 @@ public class JobService {
 		Job job = findJob(jobId);
 		job.setStatus(JobStatus.FAILED);
 		job.setCompletedAt(Instant.now());
+		job.setLastError(errorMessage);
 		job.setErrorMessage(errorMessage);
 	}
 
@@ -100,6 +132,8 @@ public class JobService {
 		dto.setCompletedAt(job.getCompletedAt());
 		dto.setResultPath(job.getResultPath());
 		dto.setErrorMessage(job.getErrorMessage());
+		dto.setAttemptCount(job.getAttemptCount());
+		dto.setLastError(job.getLastError());
 		return dto;
 	}
 }
