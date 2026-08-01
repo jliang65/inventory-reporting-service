@@ -5,15 +5,21 @@ import org.springframework.stereotype.Component;
 
 import com.jeff.inventoryreporting.config.RabbitMqConfig;
 import com.jeff.inventoryreporting.dto.JobMessage;
+import com.jeff.inventoryreporting.entity.Job;
+import com.jeff.inventoryreporting.service.InventoryActivityReportGenerator;
 import com.jeff.inventoryreporting.service.JobService;
 
 @Component
 public class JobWorker {
 
 	private final JobService jobService;
+	private final InventoryActivityReportGenerator reportGenerator;
 
-	public JobWorker(JobService jobService) {
+	public JobWorker(
+			JobService jobService,
+			InventoryActivityReportGenerator reportGenerator) {
 		this.jobService = jobService;
+		this.reportGenerator = reportGenerator;
 	}
 
 	@RabbitListener(queues = RabbitMqConfig.QUEUE)
@@ -23,21 +29,15 @@ public class JobWorker {
 		}
 
 		try {
-			fakeReportGeneration();
-			jobService.markCompleted(
-					message.getJobId(),
-					"reports/inventory-activity-" + message.getJobId() + ".csv");
+			String resultPath = generateReport(message.getJobId());
+			jobService.markCompleted(message.getJobId(), resultPath);
 		} catch (Exception exception) {
 			jobService.markFailed(message.getJobId(), exception.getMessage());
 		}
 	}
 
-	private void fakeReportGeneration() {
-		try {
-			Thread.sleep(5_000);
-		} catch (InterruptedException exception) {
-			Thread.currentThread().interrupt();
-			throw new IllegalStateException("Report generation was interrupted", exception);
-		}
+	private String generateReport(Long jobId) {
+		Job job = jobService.findJob(jobId);
+		return reportGenerator.generate(job);
 	}
 }

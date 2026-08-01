@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - inventory-reporting-data:/var/lib/postgresql/data
     healthcheck:
@@ -40,6 +40,10 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       RABBITMQ_HOST: rabbitmq
+      INVENTORY_API_BASE_URL: ${INVENTORY_API_BASE_URL:-http://host.docker.internal:8080}
+      INVENTORY_API_TOKEN: ${INVENTORY_API_TOKEN}
+    volumes:
+      - ./reports:/app/reports
     depends_on:
       postgres:
         condition: service_healthy

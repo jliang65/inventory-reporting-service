@@ -82,7 +82,7 @@ public class JobService {
 		job.setErrorMessage(errorMessage);
 	}
 
-	private Job findJob(Long jobId) {
+	public Job findJob(Long jobId) {
 		return jobRepository.findById(jobId)
 				.orElseThrow(() -> new EntityNotFoundException("Job not found: " + jobId));
 	}
