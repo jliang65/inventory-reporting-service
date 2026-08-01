@@ -26,7 +26,11 @@ public class JobWorker {
 			queues = RabbitMqConfig.QUEUE,
 			containerFactory = "jobListenerContainerFactory")
 	public void process(JobMessage message) {
-		jobService.beginAttempt(message.getJobId());
+		boolean shouldProcess = jobService.beginAttempt(message.getJobId());
+
+		if(!shouldProcess){
+			return;
+		}
 
 		try {
 			String resultPath = generateReport(message.getJobId());

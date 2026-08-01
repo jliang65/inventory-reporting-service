@@ -53,13 +53,12 @@ public class JobService {
 	}
 
 	@Transactional
-	public void beginAttempt(Long jobId) {
+	public boolean beginAttempt(Long jobId) {
 		Job job = findJob(jobId);
 
 		if (job.getStatus() == JobStatus.COMPLETED
 				|| job.getStatus() == JobStatus.FAILED) {
-			throw new IllegalStateException(
-					"Job already finished: " + jobId + " (" + job.getStatus() + ")");
+			return false;
 		}
 
 		if (job.getStatus() == JobStatus.QUEUED) {
@@ -68,6 +67,7 @@ public class JobService {
 		}
 
 		job.setAttemptCount(job.getAttemptCount() + 1);
+		return true;
 	}
 
 	@Transactional

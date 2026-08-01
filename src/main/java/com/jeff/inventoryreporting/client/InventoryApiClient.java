@@ -68,7 +68,7 @@ public class InventoryApiClient {
 							.queryParam("startDate", startDate)
 							.queryParam("endDate", endDate)
 							.queryParam("page", pageNumber)
-							.queryParam("size", 2)
+							.queryParam("size", 100)
 							.queryParam("sort", "createdAt,asc");
 
 					if (locationId != null) {
