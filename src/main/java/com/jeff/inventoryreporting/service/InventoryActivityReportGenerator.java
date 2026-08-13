@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +34,14 @@ public class InventoryActivityReportGenerator {
 	}
 
 	public String generate(Job job) {
+		LocalDate endDate = job.getEndDate() != null
+				? job.getEndDate()
+				: LocalDate.now();
+
 		List<InventoryTransactionReportRow> rows =
 				inventoryApiClient.findTransactions(
 						job.getStartDate(),
-						job.getEndDate(),
+						endDate,
 						job.getLocationId());
 
 		InventoryActivitySummary summary = calculateSummary(rows);
@@ -50,7 +55,7 @@ public class InventoryActivityReportGenerator {
 			try (BufferedWriter writer = Files.newBufferedWriter(
 					reportPath,
 					StandardCharsets.UTF_8)) {
-				writeReportDetails(writer, job);
+				writeReportDetails(writer, job, endDate);
 				writer.newLine();
 
 				writeSummary(writer, summary);
@@ -125,17 +130,18 @@ public class InventoryActivityReportGenerator {
 
 	private void writeReportDetails(
 			BufferedWriter writer,
-			Job job) throws IOException {
+			Job job,
+			LocalDate endDate) throws IOException {
 
 		writer.write("Inventory Activity Report");
 		writer.newLine();
 		writer.write(
 				"Start Date,"
-						+ escape(job.getStartDate().toString()));
+						+ escape(dateLabel(job.getStartDate(), "Beginning of history")));
 		writer.newLine();
 		writer.write(
 				"End Date,"
-						+ escape(job.getEndDate().toString()));
+						+ escape(endDate.toString()));
 		writer.newLine();
 
 		String locationValue =
@@ -196,6 +202,10 @@ public class InventoryActivityReportGenerator {
 
 	private long quantityValue(Integer value) {
 		return value == null ? 0 : value;
+	}
+
+	private String dateLabel(LocalDate date, String whenOmitted) {
+		return date == null ? whenOmitted : date.toString();
 	}
 
 	private String escape(String value) {

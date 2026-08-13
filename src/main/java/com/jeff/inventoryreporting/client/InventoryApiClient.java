@@ -65,11 +65,17 @@ public class InventoryApiClient {
 				.uri(uriBuilder -> {
 					uriBuilder
 							.path("/api/inventory/transactions")
-							.queryParam("startDate", startDate)
-							.queryParam("endDate", endDate)
 							.queryParam("page", pageNumber)
 							.queryParam("size", 100)
 							.queryParam("sort", "createdAt,asc");
+
+					if (startDate != null) {
+						uriBuilder.queryParam("startDate", startDate);
+					}
+
+					if (endDate != null) {
+						uriBuilder.queryParam("endDate", endDate);
+					}
 
 					if (locationId != null) {
 						uriBuilder.queryParam("locationId", locationId);

@@ -28,10 +28,10 @@ public class Job {
 	@Column(nullable = false, length = 30)
 	private JobStatus status;
 
-	@Column(name = "start_date", nullable = false)
+	@Column(name = "start_date")
 	private LocalDate startDate;
 
-	@Column(name = "end_date", nullable = false)
+	@Column(name = "end_date")
 	private LocalDate endDate;
 
 	@Column(name = "location_id")

@@ -37,7 +37,9 @@ public class JobService {
 	}
 
 	public JobResponseDto save(ReportRequestDto request) {
-		if (request.getEndDate().isBefore(request.getStartDate())) {
+		if (request.getStartDate() != null
+				&& request.getEndDate() != null
+				&& request.getEndDate().isBefore(request.getStartDate())) {
 			throw new IllegalArgumentException("endDate must not be before startDate");
 		}
 
