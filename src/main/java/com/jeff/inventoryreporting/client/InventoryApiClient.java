@@ -6,8 +6,10 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.jeff.inventoryreporting.dto.InventoryTransactionPage;
 import com.jeff.inventoryreporting.dto.InventoryTransactionReportRow;
@@ -27,6 +29,20 @@ public class InventoryApiClient {
 						HttpHeaders.AUTHORIZATION,
 						"Bearer " + token)
 				.build();
+	}
+
+	public void checkLocationId(Long locationId) {
+		try {
+			restClient.get()
+					.uri("/api/locations/{id}", locationId)
+					.retrieve()
+					.toBodilessEntity();
+		} catch (RestClientResponseException exception) {
+			if (exception.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) {
+				throw new IllegalArgumentException("Location not found");
+			}
+			throw exception;
+		}
 	}
 
 	public List<InventoryTransactionReportRow> findTransactions(

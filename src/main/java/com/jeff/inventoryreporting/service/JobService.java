@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.jeff.inventoryreporting.client.InventoryApiClient;
 import com.jeff.inventoryreporting.dto.JobResponseDto;
 import com.jeff.inventoryreporting.dto.ReportRequestDto;
 import com.jeff.inventoryreporting.entity.Job;
@@ -22,10 +23,15 @@ public class JobService {
 
 	private final JobRepository jobRepository;
 	private final JobPublisher jobPublisher;
+	private final InventoryApiClient inventoryApiClient;
 
-	public JobService(JobRepository jobRepository, JobPublisher jobPublisher) {
+	public JobService(
+			JobRepository jobRepository,
+			JobPublisher jobPublisher,
+			InventoryApiClient inventoryApiClient) {
 		this.jobRepository = jobRepository;
 		this.jobPublisher = jobPublisher;
+		this.inventoryApiClient = inventoryApiClient;
 	}
 
 	public JobResponseDto findById(Long id) {
@@ -41,6 +47,10 @@ public class JobService {
 				&& request.getEndDate() != null
 				&& request.getEndDate().isBefore(request.getStartDate())) {
 			throw new IllegalArgumentException("endDate must not be before startDate");
+		}
+
+		if (request.getLocationId() != null) {
+			inventoryApiClient.checkLocationId(request.getLocationId());
 		}
 
 		Job job = new Job(
