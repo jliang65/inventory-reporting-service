@@ -1,6 +1,8 @@
 package com.jeff.inventoryreporting.service;
 
 import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -65,27 +67,15 @@ public class JobService {
 	}
 
 	@Transactional
-	public boolean beginAttempt(Long jobId) {
-		Job job = findJob(jobId);
+	public Optional<UUID> tryClaim(Long jobId) {
+		UUID token = UUID.randomUUID();
+		int updatedRows = jobRepository.claimJob(jobId, token);
 
-		if (job.getStatus() == JobStatus.COMPLETED
-				|| job.getStatus() == JobStatus.FAILED) {
-			return false;
+		if (updatedRows == 0) {
+			return Optional.empty();
 		}
 
-		if (job.getStatus() == JobStatus.QUEUED) {
-			job.setStatus(JobStatus.PROCESSING);
-			job.setStartedAt(Instant.now());
-		}
-
-		job.setAttemptCount(job.getAttemptCount() + 1);
-		return true;
-	}
-
-	@Transactional
-	public void recordAttemptFailure(Long jobId, String errorMessage) {
-		Job job = findJob(jobId);
-		job.setLastError(errorMessage);
+		return Optional.of(token);
 	}
 
 	@Transactional
@@ -98,6 +88,8 @@ public class JobService {
 
 		job.setStatus(JobStatus.FAILED);
 		job.setCompletedAt(Instant.now());
+		job.setProcessingToken(null);
+		job.setLeaseExpiresAt(null);
 
 		String finalError = job.getLastError();
 
@@ -109,21 +101,36 @@ public class JobService {
 	}
 
 	@Transactional
-	public void markCompleted(Long jobId, String resultPath) {
-		Job job = findJob(jobId);
-		job.setStatus(JobStatus.COMPLETED);
-		job.setCompletedAt(Instant.now());
-		job.setResultPath(resultPath);
-		job.setErrorMessage(null);
+	public void markCompleted(
+			Long jobId,
+			UUID processingToken,
+			String resultPath) {
+		int updatedRows = jobRepository.completeClaimedJob(
+				jobId,
+				processingToken,
+				resultPath);
+
+		if (updatedRows == 0) {
+			throw new IllegalStateException(
+					"Could not complete job because the processing lease "
+							+ "is no longer owned: " + jobId);
+		}
 	}
 
 	@Transactional
-	public void markFailed(Long jobId, String errorMessage) {
-		Job job = findJob(jobId);
-		job.setStatus(JobStatus.FAILED);
-		job.setCompletedAt(Instant.now());
-		job.setLastError(errorMessage);
-		job.setErrorMessage(errorMessage);
+	public void releaseAfterFailure(
+			Long jobId,
+			UUID processingToken,
+			String errorMessage) {
+		int updatedRows = jobRepository.releaseClaimAfterFailure(
+				jobId,
+				processingToken,
+				errorMessage);
+
+		if (updatedRows == 0) {
+			throw new IllegalStateException(
+					"Could not release processing lease for job: " + jobId);
+		}
 	}
 
 	public Job findJob(Long jobId) {

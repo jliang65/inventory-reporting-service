@@ -1,5 +1,8 @@
 package com.jeff.inventoryreporting.messaging;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -26,18 +29,25 @@ public class JobWorker {
 			queues = RabbitMqConfig.QUEUE,
 			containerFactory = "jobListenerContainerFactory")
 	public void process(JobMessage message) {
-		boolean shouldProcess = jobService.beginAttempt(message.getJobId());
+		Long jobId = message.getJobId();
+		Optional<UUID> claim = jobService.tryClaim(jobId);
 
-		if(!shouldProcess){
+		if (claim.isEmpty()) {
 			return;
 		}
 
+		UUID processingToken = claim.get();
+
 		try {
-			String resultPath = generateReport(message.getJobId());
-			jobService.markCompleted(message.getJobId(), resultPath);
+			String resultPath = generateReport(jobId);
+			jobService.markCompleted(
+					jobId,
+					processingToken,
+					resultPath);
 		} catch (Exception exception) {
-			jobService.recordAttemptFailure(
-					message.getJobId(),
+			jobService.releaseAfterFailure(
+					jobId,
+					processingToken,
 					safeMessage(exception));
 			throw exception;
 		}

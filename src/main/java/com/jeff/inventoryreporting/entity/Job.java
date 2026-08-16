@@ -2,6 +2,7 @@ package com.jeff.inventoryreporting.entity;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,6 +58,12 @@ public class Job {
 
 	@Column(name = "last_error")
 	private String lastError;
+
+	@Column(name = "processing_token")
+	private UUID processingToken;
+
+	@Column(name = "lease_expires_at")
+	private Instant leaseExpiresAt;
 
 	protected Job() {
 	}
@@ -173,5 +180,21 @@ public class Job {
 
 	public void setLastError(String lastError) {
 		this.lastError = lastError;
+	}
+
+	public UUID getProcessingToken() {
+		return processingToken;
+	}
+
+	public void setProcessingToken(UUID processingToken) {
+		this.processingToken = processingToken;
+	}
+
+	public Instant getLeaseExpiresAt() {
+		return leaseExpiresAt;
+	}
+
+	public void setLeaseExpiresAt(Instant leaseExpiresAt) {
+		this.leaseExpiresAt = leaseExpiresAt;
 	}
 }
