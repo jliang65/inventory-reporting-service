@@ -89,8 +89,8 @@ Swagger UI: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagge
 
 ```json
 {
-  "startDate": "2024-01-01",
-  "endDate": "2024-01-31",
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-31",
   "locationId": 1
 }
 ```
@@ -108,7 +108,7 @@ Returns `201` and the job. Type is always `INVENTORY_ACTIVITY`.
 ```bash
 curl -s -X POST http://localhost:8081/api/jobs \
   -H "Content-Type: application/json" \
-  -d '{"startDate":"2024-01-01","endDate":"2024-01-31"}'
+  -d '{"startDate":"2026-01-01","endDate":"2026-01-31"}'
 ```
 
 
