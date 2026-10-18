@@ -16,8 +16,8 @@ You submit a job over HTTP. The service stores it, puts a message on RabbitMQ, a
 
 1. `POST /api/jobs` creates a row in `report_jobs` with status `QUEUED` and publishes the job id to RabbitMQ.
 2. A worker claims the job with a processing token and a 5 minute lease so two workers cannot process the same job at once. The lease is not renewed, so a report that takes longer than 5 minutes can be claimed by another worker.
-3. The worker loads transactions from the inventory API and writes `reports/inventory-activity-{id}.csv`.
-4. The job is marked `COMPLETED`, or the lease is released so a retry can claim it again.
+3. The worker loads transactions from the inventory API and writes a temp file named with that attempt's processing token, `reports/inventory-activity-{id}.{token}.csv.tmp`.
+4. The job is marked `COMPLETED` with that temp path. Only if this attempt still owns the lease does the worker move the file to `reports/inventory-activity-{id}.csv`. A worker that lost the lease deletes its temp file and leaves the shared CSV alone. On a generation failure, the lease is released so a retry can claim the job again.
 5. After 3 failed attempts the message goes to the dead-letter queue and the job is marked `FAILED`.
 
 Statuses: `QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED`.

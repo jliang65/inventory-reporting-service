@@ -37,25 +37,52 @@ public class JobWorker {
 		}
 
 		UUID processingToken = claim.get();
+		String temporaryReport = null;
 
 		try {
-			String resultPath = generateReport(jobId);
-			jobService.markCompleted(
+			temporaryReport = generateReport(jobId, processingToken);
+			if (!jobService.tryMarkCompleted(
 					jobId,
 					processingToken,
-					resultPath);
+					temporaryReport)) {
+				// This attempt lost the lease because another worker already
+				// completed the job. Delete the temp file and return so the
+				// message is acked. Throwing here would retry a finished job.
+				reportGenerator.delete(temporaryReport);
+				return;
+			}
 		} catch (Exception exception) {
+			reportGenerator.delete(temporaryReport);
 			jobService.releaseAfterFailure(
 					jobId,
 					processingToken,
 					safeMessage(exception));
 			throw exception;
 		}
+
+		publishReport(jobId, temporaryReport);
 	}
 
-	private String generateReport(Long jobId) {
+	private String generateReport(Long jobId, UUID processingToken) {
 		Job job = jobService.findJob(jobId);
-		return reportGenerator.generate(job);
+		return reportGenerator.generate(job, processingToken);
+	}
+
+	private void publishReport(Long jobId, String temporaryReport) {
+		//Uncomment this to create a 15 second delay to see the temporary report file
+		//try { Thread.sleep(15_000); } catch (InterruptedException ignored) {}
+
+		String published = null;
+
+		try {
+			published = reportGenerator.publish(jobId, temporaryReport);
+			jobService.updateResultPath(jobId, published);
+		} catch (RuntimeException exception) {
+			if (published != null) {
+				reportGenerator.restore(jobId, temporaryReport);
+			}
+			throw exception;
+		}
 	}
 
 	private String safeMessage(Exception exception) {

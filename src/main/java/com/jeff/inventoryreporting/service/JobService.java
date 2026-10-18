@@ -101,20 +101,31 @@ public class JobService {
 	}
 
 	@Transactional
+	public boolean tryMarkCompleted(
+			Long jobId,
+			UUID processingToken,
+			String resultPath) {
+		return jobRepository.completeClaimedJob(
+				jobId,
+				processingToken,
+				resultPath) > 0;
+	}
+
+	@Transactional
 	public void markCompleted(
 			Long jobId,
 			UUID processingToken,
 			String resultPath) {
-		int updatedRows = jobRepository.completeClaimedJob(
-				jobId,
-				processingToken,
-				resultPath);
-
-		if (updatedRows == 0) {
+		if (!tryMarkCompleted(jobId, processingToken, resultPath)) {
 			throw new IllegalStateException(
 					"Could not complete job because the processing lease "
 							+ "is no longer owned: " + jobId);
 		}
+	}
+
+	@Transactional
+	public void updateResultPath(Long jobId, String resultPath) {
+		jobRepository.updateResultPath(jobId, resultPath);
 	}
 
 	@Transactional

@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,7 +35,7 @@ public class InventoryActivityReportGenerator {
 		this.reportsDirectory = Path.of(reportsDirectory);
 	}
 
-	public String generate(Job job) {
+	public String generate(Job job, UUID processingToken) {
 		LocalDate endDate = job.getEndDate() != null
 				? job.getEndDate()
 				: LocalDate.now();
@@ -46,14 +48,14 @@ public class InventoryActivityReportGenerator {
 
 		InventoryActivitySummary summary = calculateSummary(rows);
 
+		Path temporaryReport = reportsDirectory.resolve(
+				temporaryFilename(job.getId(), processingToken));
+
 		try {
 			Files.createDirectories(reportsDirectory);
 
-			String filename = "inventory-activity-" + job.getId() + ".csv";
-			Path reportPath = reportsDirectory.resolve(filename);
-
 			try (BufferedWriter writer = Files.newBufferedWriter(
-					reportPath,
+					temporaryReport,
 					StandardCharsets.UTF_8)) {
 				writeReportDetails(writer, job, endDate);
 				writer.newLine();
@@ -72,12 +74,71 @@ public class InventoryActivityReportGenerator {
 				}
 			}
 
-			return reportPath.toString();
+			return temporaryReport.toString();
 		} catch (IOException exception) {
+			delete(temporaryReport.toString());
 			throw new IllegalStateException(
 					"Could not generate inventory activity report",
 					exception);
 		}
+	}
+
+	public String publish(Long jobId, String temporaryReport) {
+		Path published = reportsDirectory.resolve(publishedFilename(jobId));
+
+		try {
+			Files.move(
+					Path.of(temporaryReport),
+					published,
+					StandardCopyOption.ATOMIC_MOVE,
+					StandardCopyOption.REPLACE_EXISTING);
+			return published.toString();
+		} catch (IOException exception) {
+			throw new IllegalStateException(
+					"Could not publish inventory activity report",
+					exception);
+		}
+	}
+
+	public void restore(Long jobId, String temporaryReport) {
+		Path published = reportsDirectory.resolve(publishedFilename(jobId));
+		if (Files.notExists(published)) {
+			return;
+		}
+
+		try {
+			Files.move(
+					published,
+					Path.of(temporaryReport),
+					StandardCopyOption.ATOMIC_MOVE,
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException exception) {
+			throw new IllegalStateException(
+					"Could not restore inventory activity report",
+					exception);
+		}
+	}
+
+	public void delete(String reportPath) {
+		if (reportPath == null) {
+			return;
+		}
+
+		try {
+			Files.deleteIfExists(Path.of(reportPath));
+		} catch (IOException exception) {
+			throw new IllegalStateException(
+					"Could not delete inventory activity report",
+					exception);
+		}
+	}
+
+	private String temporaryFilename(Long jobId, UUID processingToken) {
+		return "inventory-activity-" + jobId + "." + processingToken + ".csv.tmp";
+	}
+
+	private String publishedFilename(Long jobId) {
+		return "inventory-activity-" + jobId + ".csv";
 	}
 
 	private InventoryActivitySummary calculateSummary(

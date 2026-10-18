@@ -65,6 +65,17 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 	@Modifying
 	@Query(value = """
 			UPDATE report_jobs
+			SET result_path = :resultPath
+			WHERE id = :jobId
+			  AND status = 'COMPLETED'
+			""", nativeQuery = true)
+	int updateResultPath(
+			@Param("jobId") Long jobId,
+			@Param("resultPath") String resultPath);
+
+	@Modifying
+	@Query(value = """
+			UPDATE report_jobs
 			SET last_error = :errorMessage,
 			    processing_token = NULL,
 			    lease_expires_at = NULL
