@@ -76,7 +76,8 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 	@Modifying
 	@Query(value = """
 			UPDATE report_jobs
-			SET last_error = :errorMessage,
+			SET status = 'QUEUED',
+			    last_error = :errorMessage,
 			    processing_token = NULL,
 			    lease_expires_at = NULL
 			WHERE id = :jobId

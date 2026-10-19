@@ -112,18 +112,6 @@ public class JobService {
 	}
 
 	@Transactional
-	public void markCompleted(
-			Long jobId,
-			UUID processingToken,
-			String resultPath) {
-		if (!tryMarkCompleted(jobId, processingToken, resultPath)) {
-			throw new IllegalStateException(
-					"Could not complete job because the processing lease "
-							+ "is no longer owned: " + jobId);
-		}
-	}
-
-	@Transactional
 	public void updateResultPath(Long jobId, String resultPath) {
 		jobRepository.updateResultPath(jobId, resultPath);
 	}

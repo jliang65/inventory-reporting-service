@@ -3,8 +3,8 @@ package com.jeff.inventoryreporting.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -112,6 +112,8 @@ class JobServiceClaimTest {
 				firstToken,
 				"Temporary failure");
 
+		assertEquals(JobStatus.QUEUED, jobRepository.findById(jobId).orElseThrow().getStatus());
+
 		Optional<UUID> secondClaim = jobService.tryClaim(jobId);
 
 		assertTrue(secondClaim.isPresent());
@@ -119,27 +121,26 @@ class JobServiceClaimTest {
 	}
 
 	@Test
-	void markCompleted_withWrongToken_throwsException() {
-		jobService.tryClaim(jobId).orElseThrow();
+	void tryMarkCompleted_withWrongToken_returnsFalse() {
+		UUID token = jobService.tryClaim(jobId).orElseThrow();
 
-		UUID wrongToken = UUID.randomUUID();
+		boolean completed = jobService.tryMarkCompleted(
+				jobId,
+				UUID.randomUUID(),
+				"reports/test.csv");
 
-		assertThrows(
-				IllegalStateException.class,
-				() -> jobService.markCompleted(
-						jobId,
-						wrongToken,
-						"reports/test.csv"));
+		assertFalse(completed);
+		assertEquals(token, jobRepository.findById(jobId).orElseThrow().getProcessingToken());
 	}
 
 	@Test
-	void markCompleted_withCorrectToken_completesJob() {
+	void tryMarkCompleted_withCorrectToken_completesJob() {
 		UUID token = jobService.tryClaim(jobId).orElseThrow();
 
-		jobService.markCompleted(
+		assertTrue(jobService.tryMarkCompleted(
 				jobId,
 				token,
-				"reports/test.csv");
+				"reports/test.csv"));
 
 		Job completed = jobRepository.findById(jobId).orElseThrow();
 
